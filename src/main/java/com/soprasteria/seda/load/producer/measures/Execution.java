@@ -1,29 +1,27 @@
 package com.soprasteria.seda.load.producer.measures;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 public class Execution {
 
-    private final String[] states = {""};
-    private final Map<String, Measure> measures;
-
-    public Execution() {
-        this.measures = new ConcurrentHashMap<>();
+    public static enum STATE {
+        SUCCESS,
+        ERROR
     }
 
-    public void init(String name) {
-        measures.put(name, new Measure(name));
-    }
+    private final Measure measure;
 
-    public void add(String name, Integer chars) {
+    public Execution(Long total, String name) {
+        measure =  new Measure(name, total);
+    }
+    public void add(STATE state, Integer chars) {
         Integer bytes = chars * 2;
-        measures.get(name).add(bytes);
+        measure.add(bytes, state.equals(STATE.ERROR));
+    }
+    public Long getTotal() {
+        return measure.getTotal();
+    }
+    public Measure getMeasure() {
+        return measure;
     }
 
-    public void finish() {
-        for (String name: measures.keySet()) {
-            measures.get(name).finish();
-        }
-    }
+
 }

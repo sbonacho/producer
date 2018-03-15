@@ -1,7 +1,7 @@
 package com.soprasteria.seda.load.producer.api;
 
 import com.soprasteria.seda.load.producer.services.Producer;
-import com.soprasteria.seda.load.producer.api.model.ProducerConfig;
+import com.soprasteria.seda.load.model.ExecutionConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,12 +28,13 @@ public class ProducerController {
 
 	@RequestMapping(method = PUT, consumes = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseBody
-	public ResponseEntity startProducers(@RequestBody @Valid ProducerConfig config) {
-		LOGGER.info("Start producer configuration -> {}", config);
+	public ResponseEntity startProducers(@RequestBody @Valid ExecutionConfig config) {
+		LOGGER.info("Start producer with configuration -> {}", config);
 		try {
 			producer.run(config);
 			return new ResponseEntity(HttpStatus.OK);
 		} catch(Exception e) {
+			LOGGER.error("{}", e);
 			return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}

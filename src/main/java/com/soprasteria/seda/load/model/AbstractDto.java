@@ -1,4 +1,4 @@
-package com.soprasteria.seda.load.producer.api.model;
+package com.soprasteria.seda.load.model;
 
 import java.io.Serializable;
 

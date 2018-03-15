@@ -1,7 +1,7 @@
 package com.soprasteria.seda.load.producer.services;
 
-import com.soprasteria.seda.load.producer.api.model.ProducerConfig;
+import com.soprasteria.seda.load.model.ExecutionConfig;
 
 public interface Producer {
-    public void run(ProducerConfig config);
+    public void run(ExecutionConfig config);
 }

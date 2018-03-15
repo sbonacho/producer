@@ -1,7 +1,8 @@
 package com.soprasteria.seda.load.producer.services;
 
-import com.soprasteria.seda.load.producer.api.model.ProducerConfig;
-import com.soprasteria.seda.load.producer.bus.kafka.producer.SenderImpl;
+import com.soprasteria.seda.load.model.ExecutionConfig;
+import com.soprasteria.seda.load.producer.bus.alone.SenderAlone;
+import com.soprasteria.seda.load.producer.bus.kafka.producer.ControlSender;
 import com.soprasteria.seda.load.producer.bus.producer.Sender;
 import com.soprasteria.seda.load.producer.measures.Execution;
 import com.soprasteria.seda.load.producer.utils.RandomString;
@@ -11,9 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.text.DecimalFormat;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class PooledProducer implements Producer {
@@ -21,62 +22,65 @@ public class PooledProducer implements Producer {
     @Value("${producer.globalTimeout}")
     private Integer seconds;
 
-
     private static final Logger LOGGER = LoggerFactory.getLogger(PooledProducer.class);
 
     @Autowired
-    private Sender<String> sender;
+    private ControlSender control;
 
-    public void run(ProducerConfig config){
+    private void subRun(ExecutionConfig config){
+        Sender<String> sender = new SenderAlone(config.getProducerConfig());
         final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(config.getThreads());
-        final ThreadPoolExecutor topicExec = (ThreadPoolExecutor) Executors.newFixedThreadPool(config.getTopics().length);
         final RandomString random = new RandomString(config.getLength());
-        Execution execution = new Execution();
-        execution.init("total-success");
-        execution.init("total-error");
-        execution.init("total-sent");
-        for (String topic: config.getTopics()) {
-            topicExec.submit(() -> {
-                execution.init(topic+"-success");
-                execution.init(topic+"-error");
-                execution.init(topic+"-sent");
-                for (int i = 0; i < config.getMessages(); i++) {
-                    executor.submit(() -> {
-                        String message = random.nextString();
-                        sender.send(message, topic).addCallback((result) -> {
-                            execution.add(topic+"-success", message.length());
-                        }, (error) -> {
-                            execution.add(topic+"-error", message.length());
-                        });
-                        execution.add(topic+"-sent", message.length());
-                    });
-                }
+        Execution execution = new Execution(config.getMessages(), config.getTopic());
+        for (int i = 0; i < config.getMessages(); i++) {
+            executor.submit(() -> {
+                String message = random.nextString();
+                sender.send(message, config.getTopic()).addCallback((result) -> {
+                    execution.add(Execution.STATE.SUCCESS, message.length());
+                }, (error) -> {
+                    execution.add(Execution.STATE.ERROR, message.length());
+                });
             });
         }
+
         try {
-            LOGGER.info("---- waiting? ......");
-            Thread.sleep(10);
+            // Esperar a que acaben todos los hilos -> Muy mejorable pero de momento se queda así..... ;)
+            LOGGER.info("---- RUNNING ......");
             int i = 0;
-            seconds = seconds * 100;
-            LOGGER.info("-getActiveCount---------->{}", executor.getActiveCount());
-            LOGGER.info("-getCompletedTaskCount--->{}", executor.getCompletedTaskCount());
-            LOGGER.info("-getQueue---------------->{}", executor.getQueue());
-            LOGGER.info("-getTaskCount------------>{}", executor.getTaskCount());
-            LOGGER.info("-isTerminating----------->{}", executor.isTerminating());
-            while ( executor.getTaskCount() >  executor.getCompletedTaskCount()) {
-                Thread.sleep(10);
-                LOGGER.info("-getActiveCount---------->{}", executor.getActiveCount());
-                LOGGER.info("-getCompletedTaskCount--->{}", executor.getCompletedTaskCount());
-                LOGGER.info("-getQueue---------------->{}", executor.getQueue());
-                LOGGER.info("-getTaskCount------------>{}", executor.getTaskCount());
-                LOGGER.info("-isTerminating----------->{}", executor.isTerminating());
+            while ( ! execution.getMeasure().isFinished() &&  i < seconds * 10) {
+                Thread.sleep(100);
                 i++;
             }
-            //executor.shutdown();
+            if ( ! execution.getMeasure().isFinished() )
+                execution.getMeasure().finish();
             LOGGER.info("---- FINISH ......");
-
+            print(execution, config);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public void run(ExecutionConfig config){
+        control.send(config).addCallback((result) -> {
+            LOGGER.info("-------------------------------------------------");
+            this.subRun(config);
+        }, (e) -> {
+            LOGGER.error("Impossible to send control message {}", e);
+        });
+    }
+
+    public void print(Execution execution, ExecutionConfig config) {
+        DecimalFormat df2 = new DecimalFormat( "#,###,###,##0.00000" );
+        LOGGER.info("---------------- Configured: ---------");
+        LOGGER.info("Messages: {}", config.getMessages());
+        LOGGER.info("Topic: {}", config.getTopic());
+        LOGGER.info("---------------- Results of Test: ---------");
+        LOGGER.info("Total Bytes: {}", execution.getMeasure().getBytes());
+        LOGGER.info("Messages OK: {}", execution.getMeasure().getCount());
+        LOGGER.info("Messages KO: {}", execution.getMeasure().getErrors());
+        Long elapsed = execution.getMeasure().getElapsedTime();
+        elapsed = elapsed == null ? 0 : elapsed;
+        LOGGER.info("Elapsed Time: {} s", df2.format((float)(elapsed)/1000000000));
+        LOGGER.info("{}", execution.getMeasure());
     }
 }

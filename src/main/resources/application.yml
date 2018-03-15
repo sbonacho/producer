@@ -2,4 +2,5 @@ kafka:
   bootstrap-servers: 172.16.123.1:9092
 
 producer:
-  globalTimeout: 1
+  globalTimeout: 1200
+  controlTopic: control

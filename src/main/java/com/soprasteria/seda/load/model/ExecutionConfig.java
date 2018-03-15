@@ -1,13 +1,16 @@
-package com.soprasteria.seda.load.producer.api.model;
+package com.soprasteria.seda.load.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.util.Map;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ProducerConfig extends AbstractDto {
+public class ExecutionConfig extends AbstractDto {
     private Long messages;
     private Integer threads;
     private Integer[] length;
-    private String[] topics;
+    private Map<String, Object> producerConfig;
+    private String topic;
 
     public Long getMessages() {
         return messages;
@@ -33,11 +36,19 @@ public class ProducerConfig extends AbstractDto {
         this.threads = threads;
     }
 
-    public String[] getTopics() {
-        return topics;
+    public String getTopic() {
+        return topic;
     }
 
-    public void setTopics(String[] topics) {
-        this.topics = topics;
+    public void setTopic(String topic) {
+        this.topic = topic;
+    }
+
+    public Map<String, Object> getProducerConfig() {
+        return producerConfig;
+    }
+
+    public void setProducerConfig(Map<String, Object> producerConfig) {
+        this.producerConfig = producerConfig;
     }
 }
