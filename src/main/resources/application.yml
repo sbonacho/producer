@@ -4,3 +4,4 @@ kafka:
 producer:
   globalTimeout: 1200
   controlTopic: control
+  logPeriod: 100000

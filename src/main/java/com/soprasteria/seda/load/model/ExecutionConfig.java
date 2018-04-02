@@ -11,6 +11,7 @@ public class ExecutionConfig extends AbstractDto {
     private Integer[] length;
     private Map<String, Object> producerConfig;
     private String topic;
+    private Boolean waitForAck;
 
     public Long getMessages() {
         return messages;
@@ -50,5 +51,13 @@ public class ExecutionConfig extends AbstractDto {
 
     public void setProducerConfig(Map<String, Object> producerConfig) {
         this.producerConfig = producerConfig;
+    }
+
+    public Boolean getWaitForAck() {
+        return waitForAck;
+    }
+
+    public void setWaitForAck(Boolean waitForAck) {
+        this.waitForAck = waitForAck;
     }
 }

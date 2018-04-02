@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -22,30 +23,63 @@ public class PooledProducer implements Producer {
     @Value("${producer.globalTimeout}")
     private Integer seconds;
 
+    @Value("${producer.logPeriod}")
+    private Integer logPeriod;
+
+
     private static final Logger LOGGER = LoggerFactory.getLogger(PooledProducer.class);
 
     @Autowired
     private ControlSender control;
 
-    private void subRun(ExecutionConfig config){
-        Sender<String> sender = new SenderAlone(config.getProducerConfig());
-        final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(config.getThreads());
-        final RandomString random = new RandomString(config.getLength());
-        Execution execution = new Execution(config.getMessages(), config.getTopic());
-        for (int i = 0; i < config.getMessages(); i++) {
+    public void run(ExecutionConfig config){
+        control.send(config).addCallback((result) -> {
+            LOGGER.info("run: INIT");
+            Sender<String> sender = new SenderAlone(config.getProducerConfig());
+            final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(config.getThreads());
+            final RandomString random = new RandomString(config.getLength());
+            final Execution execution = new Execution(config.getMessages(), config.getTopic());
+
+            this.execute(config, execution, sender, executor, random);
+            this.waitForTheEnd(execution);
+            this.print(execution);
+        }, (e) -> {
+            LOGGER.error("Impossible to send control message {}", e);
+        });
+    }
+    private void execute(ExecutionConfig config, Execution execution, Sender<String> sender, ThreadPoolExecutor executor, RandomString random){
+        if (! execution.isFinished()) {
             executor.submit(() -> {
                 String message = random.nextString();
+                if (new BigDecimal(execution.getCount()).divide(BigDecimal.valueOf(logPeriod)).remainder(BigDecimal.ONE).equals(BigDecimal.ZERO))
+                    LOGGER.info("acks: {} - {}/{}", execution.getMeasure().getCount(), execution.getCount(), execution.getTotal());
                 sender.send(message, config.getTopic()).addCallback((result) -> {
                     execution.add(Execution.STATE.SUCCESS, message.length());
+                    if (config.getWaitForAck()) {
+                        execution.addCount();
+                        this.execute(config, execution, sender, executor, random);
+                    }
                 }, (error) -> {
                     execution.add(Execution.STATE.ERROR, message.length());
+                    if (config.getWaitForAck()) {
+                        execution.addCount();
+                        this.execute(config, execution, sender, executor, random);
+                    }
                 });
+                if (! config.getWaitForAck()) {
+                    execution.addCount();
+                    this.execute(config, execution, sender, executor, random);
+                }
             });
         }
+    }
 
+    /**
+     * Esperar a que acaben todos los hilos -> Mejorable, pero de momento se queda así... ;)
+     * @param execution
+     */
+    private void waitForTheEnd (Execution execution) {
         try {
-            // Esperar a que acaben todos los hilos -> Muy mejorable pero de momento se queda así..... ;)
-            LOGGER.info("---- RUNNING ......");
             int i = 0;
             while ( ! execution.getMeasure().isFinished() &&  i < seconds * 10) {
                 Thread.sleep(100);
@@ -54,30 +88,13 @@ public class PooledProducer implements Producer {
             if ( ! execution.getMeasure().isFinished() )
                 execution.getMeasure().finish();
             LOGGER.info("---- FINISH ......");
-            print(execution, config);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    public void run(ExecutionConfig config){
-        control.send(config).addCallback((result) -> {
-            LOGGER.info("-------------------------------------------------");
-            this.subRun(config);
-        }, (e) -> {
-            LOGGER.error("Impossible to send control message {}", e);
-        });
-    }
-
-    public void print(Execution execution, ExecutionConfig config) {
+    private void print(Execution execution) {
         DecimalFormat df2 = new DecimalFormat( "#,###,###,##0.00000" );
-        LOGGER.info("---------------- Configured: ---------");
-        LOGGER.info("Messages: {}", config.getMessages());
-        LOGGER.info("Topic: {}", config.getTopic());
-        LOGGER.info("---------------- Results of Test: ---------");
-        LOGGER.info("Total Bytes: {}", execution.getMeasure().getBytes());
-        LOGGER.info("Messages OK: {}", execution.getMeasure().getCount());
-        LOGGER.info("Messages KO: {}", execution.getMeasure().getErrors());
         Long elapsed = execution.getMeasure().getElapsedTime();
         elapsed = elapsed == null ? 0 : elapsed;
         LOGGER.info("Elapsed Time: {} s", df2.format((float)(elapsed)/1000000000));
