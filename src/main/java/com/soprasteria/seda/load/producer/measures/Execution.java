@@ -2,6 +2,10 @@ package com.soprasteria.seda.load.producer.measures;
 
 public class Execution {
 
+    public Long getTotal() {
+        return this.measure.getTotal();
+    }
+
     public static enum STATE {
         SUCCESS,
         ERROR
@@ -15,14 +19,10 @@ public class Execution {
         measure =  new Measure(name, total);
     }
     public void add(STATE state, Integer chars) {
-        Integer bytes = chars * 2;
-        measure.add(bytes, state.equals(STATE.ERROR));
+        measure.add(chars, state.equals(STATE.ERROR));
     }
     public void addCount (){
         count++;
-    }
-    public Long getTotal() {
-        return measure.getTotal();
     }
     public Measure getMeasure() {
         return measure;
