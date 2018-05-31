@@ -4,6 +4,8 @@ This microservice is able to generate heavy load of a kafka server. Use Spring K
 
 This service expose REST API in order to configure and start the execution.
 
+**SERVICE UNDER CONSTRUCTION: documentation may not match with functionality 100%**
+
 # Quickstart
 
 Install de service and start this service.
