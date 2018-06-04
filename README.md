@@ -1,6 +1,6 @@
 # Microservice Producer
 
-This microservice is able to generate heavy load of a kafka server. Use Spring Kafka in order to create a conection to the broker and produce messages.
+This microservice can generate heavy load to a kafka server. Use Spring Kafka in order to create a conection to the broker and produce messages.
 
 This service expose REST API in order to configure and start the execution.
 
@@ -8,7 +8,7 @@ This service expose REST API in order to configure and start the execution.
 
 # Quickstart
 
-Install de service and start this service.
+Install and start the service.
 
 ```
 git clone https://innersource.soprasteria.com/kafka-load-tester/producer
@@ -16,7 +16,7 @@ cd producer
 mvn spring-boot:run
 ```
 
-Send PUT request to the service http://localhost:8080/producer
+Send PUT request to http://localhost:8080/producer
 
 ```
 curl -X PUT -w "%{http_code}" -H "Content-Type: application/json" -d '{"messages": 1000, "threads": 2, "length": [50], "producerConfig": {"acks": 1, "bootstrap.servers": "localhost:9092"}, "topic" : "test", "waitForAck": true }' http://localhost:8080/producer
