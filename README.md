@@ -11,7 +11,7 @@ This service expose REST API in order to configure and start the execution.
 Install and start the service.
 
 ```
-git clone https://innersource.soprasteria.com/kafka-load-tester/producer
+git clone https://github.com/sbonacho/producer.git
 cd producer
 mvn spring-boot:run
 ```
@@ -92,7 +92,7 @@ mvn install dockerfile:build
 This command starts the service with domain-clients name
 
 ```
-docker run --rm -dit -p 8080:8080 --name domain-clients soprasteria/producer
+docker run --rm -dit -p 8080:8080 --name domain-clients sbonacho/producer
 ```
 
 Watching logs
