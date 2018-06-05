@@ -1,6 +1,6 @@
 # Microservice Producer
 
-This microservice can generate heavy load to a kafka server. Use Spring Kafka in order to create a conection to the broker and produce messages.
+This microservice can generate heavy load to a kafka server and to a MQTT server like Mosquitto. Use Spring Kafka in order to create a conection to the broker and produce messages. Also use Spring Integrations to stress MQTT broker. 
 
 This service expose REST API in order to configure and start the execution.
 
@@ -41,7 +41,8 @@ Consumers has the overall test information in order to make some checks on the e
 ## Payload Description
 
 ```
-{  
+{
+   "queueManager": "kafka",
    "messages":1000,
    "threads":2,
    "length":[ 50 ],
@@ -54,6 +55,7 @@ Consumers has the overall test information in order to make some checks on the e
 }
 ```
 
+- **queueManager:** ("kafka: default") could be "mqtt" for MQTT broker stress tests.
 - **messages:** The number of total messages/events generated in this load test execution.
 - **threads:** Number of thread used for the tests
 - **length:** Length of the messages/events, [min, max]: for example: [1, 500] messages from 1 to 500 bytes. [100] messages of 100 bytes.
