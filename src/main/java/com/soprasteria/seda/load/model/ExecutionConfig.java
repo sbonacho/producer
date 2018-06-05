@@ -7,6 +7,7 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ExecutionConfig extends AbstractDto {
     private Long messages;
+    private String queueManager;
     private Integer threads;
     private Integer[] length;
     private Map<String, Object> producerConfig;
@@ -59,5 +60,13 @@ public class ExecutionConfig extends AbstractDto {
 
     public void setWaitForAck(Boolean waitForAck) {
         this.waitForAck = waitForAck;
+    }
+
+    public String getQueueManager() {
+        return queueManager;
+    }
+
+    public void setQueueManager(String queueManager) {
+        this.queueManager = queueManager;
     }
 }

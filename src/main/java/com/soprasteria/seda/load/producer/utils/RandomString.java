@@ -4,12 +4,12 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class RandomString {
+public class RandomString implements RandomMessage{
 
     /**
      * Generate a random string.
      */
-    public String nextString() {
+    public String next() {
         char[] buf = this.getBuf();
         for (int idx = 0; idx < buf.length; ++idx)
             buf[idx] = symbols[random.nextInt(symbols.length)];

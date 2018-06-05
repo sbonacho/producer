@@ -3,8 +3,11 @@ package com.soprasteria.seda.load.producer.services;
 import com.soprasteria.seda.load.model.ExecutionConfig;
 import com.soprasteria.seda.load.producer.bus.alone.SenderAlone;
 import com.soprasteria.seda.load.producer.bus.kafka.producer.ControlSender;
+import com.soprasteria.seda.load.producer.bus.mqtt.SenderMqtt;
 import com.soprasteria.seda.load.producer.bus.producer.Sender;
 import com.soprasteria.seda.load.producer.measures.Execution;
+import com.soprasteria.seda.load.producer.utils.RandomMessage;
+import com.soprasteria.seda.load.producer.utils.RandomPresence;
 import com.soprasteria.seda.load.producer.utils.RandomString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,31 +38,44 @@ public class PooledProducer implements Producer {
     public void run(ExecutionConfig config){
         control.send(config).addCallback((result) -> {
             LOGGER.info("run: INIT");
-            Sender<String> sender = new SenderAlone(config.getProducerConfig());
+            Sender<String> sender = null;
+            RandomMessage random = null;
+            switch (config.getQueueManager()) {
+                case "mqtt":
+                    sender = new SenderMqtt(config.getProducerConfig());
+                    random = new RandomPresence();
+                    break;
+                default:
+                    sender = new SenderAlone(config.getProducerConfig());
+                    random = new RandomString(config.getLength());
+            }
             final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(config.getThreads());
-            final RandomString random = new RandomString(config.getLength());
             final Execution execution = new Execution(config.getMessages(), config.getTopic());
 
             this.execute(config, execution, sender, executor, random);
             this.waitForTheEnd(execution);
             this.print(execution);
+            sender = null;
+            System.gc();
         }, (e) -> {
             LOGGER.error("Impossible to send control message {}", e);
         });
     }
-    private void execute(ExecutionConfig config, Execution execution, Sender<String> sender, ThreadPoolExecutor executor, RandomString random){
+    private void execute(ExecutionConfig config, Execution execution, Sender<String> sender, ThreadPoolExecutor executor, RandomMessage random){
         if (! execution.isFinished()) {
             executor.submit(() -> {
-                String message = random.nextString();
+                String message = random.next();
                 if (new BigDecimal(execution.getCount()).divide(BigDecimal.valueOf(logPeriod)).remainder(BigDecimal.ONE).equals(BigDecimal.ZERO))
                     LOGGER.info("acks: {} - {}/{}", execution.getMeasure().getCount(), execution.getCount(), execution.getTotal());
                 sender.send(message, config.getTopic()).addCallback((result) -> {
+
                     execution.add(Execution.STATE.SUCCESS, message.length());
                     if (config.getWaitForAck()) {
                         execution.addCount();
                         this.execute(config, execution, sender, executor, random);
                     }
                 }, (error) -> {
+
                     execution.add(Execution.STATE.ERROR, message.length());
                     if (config.getWaitForAck()) {
                         execution.addCount();

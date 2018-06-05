@@ -8,7 +8,7 @@ public class RandomStringTest {
 
     private void tester(Integer[] rank, Integer max, Integer min){
         RandomString random = new RandomString(rank);
-        assertThat(random.nextString().length()).isBetween(min, max);
+        assertThat(random.next().length()).isBetween(min, max);
     }
 
     @Test
