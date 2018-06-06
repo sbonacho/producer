@@ -19,7 +19,7 @@ mvn spring-boot:run
 Send PUT request to http://localhost:8080/producer
 
 ```
-curl -X PUT -w "%{http_code}" -H "Content-Type: application/json" -d '{"messages": 1000, "threads": 2, "length": [50], "producerConfig": {"acks": 1, "bootstrap.servers": "localhost:9092"}, "topic" : "test", "waitForAck": true }' http://localhost:8080/producer
+curl -X PUT -w "%{http_code}" -H "Content-Type: application/json" -d '{"messages": 1000, "threads": 2, "length": [50], "producerConfig": {"acks": "1", "bootstrap.servers": "localhost:9092"}, "topic" : "test", "waitForAck": true }' http://localhost:8080/producer
 ```
 
 This command sends one control message using the kafka server configured con application.yml but generate load using configuration in the payload
